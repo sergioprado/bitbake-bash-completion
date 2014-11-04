@@ -1,0 +1,65 @@
+_bitbake()
+{
+    COMPREPLY=()
+
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    opts_short="-h -b -k -a -f -c -C -r -R -v -D -n -S -p -s -e -g -I \
+                -l -P -u -t -B -m"
+
+    opts_long="--version --help --buildfile --continue --tryaltconfigs \
+               --force --cmd --clear-stamp --read --postread --verbose \
+               --debug --dry-run --dump-signatures --parse-only \
+               --show-versions --environment --graphviz --ignore-deps \
+               --log-domains --profile --ui --servertype \
+               --revisions-changed --server-only --bind --no-setscene \
+               --remote-server --kill-server --observe-only \
+               --status-only"
+
+    tasks="build bundle_initramfs checkuri checkuriall clean cleanall \
+           cleansstate compile configure devshell fetch fetchall \
+           install listtasks package package_setscene \
+           package_write_rpm package_write_rpm_setscene packagedata \
+           packagedata_setscene patch populate_lic \
+           populate_lic_setscene populate_sdk populate_sysroot \
+           populate_sysroot_setscene rootfs unpack compile_ptest_base \
+           configure_ptest_base diffconfig install_ptest_base \
+           menuconfig patch"
+
+    if [ "${cur}" == --* ]; then
+        COMPREPLY=( $(compgen -W "${opts_long}" -- ${cur}) )
+        return 0
+    elif [ "${cur}" == -* ]; then
+        COMPREPLY=( $(compgen -W "${opts_short}" -- ${cur}) )
+        return 0
+    fi
+
+    if [ "${prev}" == "-c" ]; then
+        COMPREPLY=( $(compgen -W "${tasks}" -- ${cur}) )
+        return 0
+    fi
+
+    md5sum --quiet -c .bblayers.conf.md5 2>/dev/null
+    if [ $? != 0 -o "x$BBPATH" == "x" ]; then
+        echo -e "\nReading BBPATH..."
+        md5sum conf/bblayers.conf > .bblayers.conf.md5
+        BBPATH=`bitbake -e | grep "^BBPATH="`
+        echo "Done! Press TAB to continue..."
+    fi
+
+    recipes=""
+    for d in `echo $BBPATH | sed s/:/\ /g`; do
+        for f in `echo $d/*/*/${cur}*.bb`; do
+            if [ -e $f ]; then
+                filename=`basename $f`
+                filename=${filename%%_*.bb}
+                filename=${filename%%.bb}
+                recipes="$recipes $filename"
+            fi
+        done
+    done
+    COMPREPLY=( $(compgen -W "${recipes}" -- ${cur}) )
+    return 0
+}
+complete -F _bitbake bitbake
