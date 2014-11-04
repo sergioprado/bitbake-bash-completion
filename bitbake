@@ -27,25 +27,25 @@ _bitbake()
            configure_ptest_base diffconfig install_ptest_base \
            menuconfig patch"
 
-    if [ "${cur}" == --* ]; then
+    if [[ "${cur}" == --* ]]; then
         COMPREPLY=( $(compgen -W "${opts_long}" -- ${cur}) )
         return 0
-    elif [ "${cur}" == -* ]; then
+    elif [[ "${cur}" == -* ]]; then
         COMPREPLY=( $(compgen -W "${opts_short}" -- ${cur}) )
         return 0
     fi
 
-    if [ "${prev}" == "-c" ]; then
+    if [[ "${prev}" == "-c" ]]; then
         COMPREPLY=( $(compgen -W "${tasks}" -- ${cur}) )
         return 0
     fi
 
     md5sum --quiet -c .bblayers.conf.md5 2>/dev/null
     if [ $? != 0 -o "x$BBPATH" == "x" ]; then
-        echo -e "\nReading BBPATH..."
-        md5sum conf/bblayers.conf > .bblayers.conf.md5
-        BBPATH=`bitbake -e | grep "^BBPATH="`
-        echo "Done! Press TAB to continue..."
+         echo -e "\nReading BBPATH..."
+         md5sum conf/bblayers.conf > .bblayers.conf.md5
+         BBPATH=`bitbake -e | grep "^BBPATH="`
+         echo "Done! Press TAB to continue..."
     fi
 
     recipes=""
