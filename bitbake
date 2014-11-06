@@ -1,5 +1,15 @@
+#!bash
+#
+# Bash completion support for Bitbake
+#
+# Copyright (C) 2014 Sergio Prado <sergio.prado@e-labworks.com>
+# Distributed under the MIT License (MIT)
+#
+
 _bitbake()
 {
+    local cur prev opts_short opts_long tasks bbdir bbfile recipes
+
     COMPREPLY=()
 
     cur="${COMP_WORDS[COMP_CWORD]}"
@@ -8,13 +18,13 @@ _bitbake()
     opts_short="-h -b -k -a -f -c -C -r -R -v -D -n -S -p -s -e -g -I \
                 -l -P -u -t -B -m"
 
-    opts_long="--version --help --buildfile --continue --tryaltconfigs \
-               --force --cmd --clear-stamp --read --postread --verbose \
-               --debug --dry-run --dump-signatures --parse-only \
-               --show-versions --environment --graphviz --ignore-deps \
-               --log-domains --profile --ui --servertype \
-               --revisions-changed --server-only --bind --no-setscene \
-               --remote-server --kill-server --observe-only \
+    opts_long="--version --help --buildfile= --continue --tryaltconfigs \
+               --force --cmd= --clear-stamp= --read= --postread= --verbose \
+               --debug --dry-run --dump-signatures= --parse-only \
+               --show-versions --environment --graphviz --ignore-deps= \
+               --log-domains= --profile --ui= --servertype= --token= \
+               --revisions-changed --server-only --bind= --no-setscene \
+               --remote-server= --kill-server --observe-only \
                --status-only"
 
     tasks="build bundle_initramfs checkuri checkuriall clean cleanall \
@@ -27,18 +37,37 @@ _bitbake()
            configure_ptest_base diffconfig install_ptest_base \
            menuconfig patch"
 
-    if [[ "${cur}" == --* ]]; then
-        COMPREPLY=( $(compgen -W "${opts_long}" -- ${cur}) )
-        return 0
-    elif [[ "${cur}" == -* ]]; then
-        COMPREPLY=( $(compgen -W "${opts_short}" -- ${cur}) )
-        return 0
+    if [[ "$prev" == "=" ]]; then
+        prev="${COMP_WORDS[COMP_CWORD - 2]}"
+    elif [[ "$cur" == "=" ]]; then
+        cur=""
     fi
 
-    if [[ "${prev}" == "-c" ]]; then
-        COMPREPLY=( $(compgen -W "${tasks}" -- ${cur}) )
-        return 0
-    fi
+    case "$prev" in
+       
+        "-c"|"--cmd")
+            COMPREPLY=( $(compgen -W "${tasks}" -- ${cur}) )
+            return 0
+        ;;
+
+    esac
+
+    case "$cur" in
+
+        "--"*)
+            COMPREPLY=( $(compgen -W "${opts_long}" -- ${cur}) )
+            if [[ ${#COMPREPLY[@]} == 1 && ${COMPREPLY[0]} == "--"*"=" ]] ; then
+                compopt -o nospace
+            fi
+            return 0
+        ;;
+
+        "-"*)
+            COMPREPLY=( $(compgen -W "${opts_short}" -- ${cur}) )
+            return 0
+        ;;
+
+    esac
 
     md5sum --quiet -c .bblayers.conf.md5 2>/dev/null
     if [ $? != 0 -o "x$BBPATH" == "x" ]; then
@@ -48,17 +77,17 @@ _bitbake()
          echo "Done! Press TAB to continue..."
     fi
 
-    recipes=""
-    for d in `echo $BBPATH | sed s/:/\ /g`; do
-        for f in `echo $d/*/*/${cur}*.bb`; do
-            if [ -e $f ]; then
-                filename=`basename $f`
-                filename=${filename%%_*.bb}
-                filename=${filename%%.bb}
-                recipes="$recipes $filename"
+    for bbdir in `echo $BBPATH | sed s/:/\ /g`; do
+        for bbfile in `echo $bbdir/*/*/${cur}*.bb`; do
+            if [ -e $bbfile ]; then
+                bbfile=`basename $bbfile`
+                bbfile=${bbfile%%_*.bb}
+                bbfile=${bbfile%%.bb}
+                recipes="$recipes $bbfile"
             fi
         done
     done
+
     COMPREPLY=( $(compgen -W "${recipes}" -- ${cur}) )
     return 0
 }
