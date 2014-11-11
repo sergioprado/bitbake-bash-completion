@@ -9,6 +9,7 @@
 _bitbake()
 {
     local cur prev opts_short opts_long tasks bbdir bbfile recipes
+    local bblayers_conf bblayers_md5 bblayers_bbpath
 
     COMPREPLY=()
 
@@ -69,15 +70,23 @@ _bitbake()
 
     esac
 
-    md5sum --quiet -c .bblayers.conf.md5 2>/dev/null
-    if [ $? != 0 -o "x$BBPATH" == "x" ]; then
-         echo -e "\nReading BBPATH..."
-         md5sum conf/bblayers.conf > .bblayers.conf.md5
-         BBPATH=`bitbake -e | grep "^BBPATH="`
-         echo "Done! Press TAB to continue..."
+    bblayers_conf="conf/bblayers.conf"
+    bblayers_md5=".bblayers.conf.md5"
+    bblayers_bbpath=".bblayers.bbpath"
+
+    if [ ! -e $bblayers_conf ]; then
+        return 0;
     fi
 
-    for bbdir in `echo $BBPATH | sed s/:/\ /g`; do
+    md5sum --quiet --status -c $bblayers_md5 2>/dev/null
+    if [ $? != 0 -o ! -e $bblayers_bbpath ]; then
+         printf "\nReading BBPATH..."
+         md5sum $bblayers_conf > $bblayers_md5
+         echo `bitbake -e | grep "^BBPATH=" | cut -d "=" -f 2 | sed -e 's/^"//'  -e 's/"$//'` > $bblayers_bbpath
+         echo "done! Press TAB to continue..."
+    fi
+
+    for bbdir in `cat $bblayers_bbpath | sed s/:/\ /g`; do
         for bbfile in `echo $bbdir/*/*/${cur}*.bb`; do
             if [ -e $bbfile ]; then
                 bbfile=`basename $bbfile`
