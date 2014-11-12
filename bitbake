@@ -8,8 +8,9 @@
 
 _bitbake()
 {
-    local cur prev opts_short opts_long tasks bbdir bbfile recipes
+    local cur prev opts_short opts_long tasks recipes bbfile_entry recipe
     local ui bblayers_conf bblayers_md5 bblayers_bbfile bblayers_recipes
+    local recipe_path
 
     COMPREPLY=()
 
@@ -83,19 +84,20 @@ _bitbake()
     bblayers_recipes=".bblayers.recipes"
 
     _parse_recipes () {
-	echo `bitbake -e | grep "^BBFILES=" | cut -d "=" -f 2 | sed -e 's/"//g'` > $bblayers_bbfile
-	 for bbfile_entry in `cat $bblayers_bbfile`; do
-	     if [ "${bbfile_entry%.bbappend}" = "${bbfile_entry}" ]; then
-		 echo $bbfile_entry
-	     fi
-	 done | while read recipe_path; do
-	     recipe="${recipe_path##*/}"
-	     recipe="${recipe%%_*.bb}"
-	     recipe="${recipe%%.bb}"
-	     if [ "$recipe" != "*" ]; then
-		 echo $recipe
-	     fi
-	 done > $bblayers_recipes
+	    echo `bitbake -e | grep "^BBFILES=" | cut -d "=" -f 2 | sed -e 's/"//g'` > $bblayers_bbfile
+	    for bbfile_entry in `cat $bblayers_bbfile`; do
+	        if [ "${bbfile_entry%.bbappend}" = "${bbfile_entry}" ]; then
+		        echo $bbfile_entry
+	        fi
+	    done | while read recipe_path; do
+	        recipe="${recipe_path##*/}"
+	        recipe="${recipe%%_*.bb}"
+	        recipe="${recipe%%.bb}"
+	        if [ "$recipe" != "*" ]; then
+		        echo $recipe
+	        fi
+	    done > $bblayers_recipes
+        rm -Rf $bblayers_bbfile
     }
 
     if [ ! -e $bblayers_conf ]; then
@@ -103,13 +105,13 @@ _bitbake()
     fi
 
     if [ "$prev" = "bitbake" -a "$cur" = "" ]; then
-	_parse_recipes
+	    _parse_recipes
     fi
 
     md5sum --quiet --status -c $bblayers_md5 2>/dev/null
     if [ $? != 0 -o ! -e $bblayers_recipes ]; then
          md5sum $bblayers_conf > $bblayers_md5
-	 _parse_recipes
+	    _parse_recipes
     fi
 
     recipes=`cat $bblayers_recipes`
