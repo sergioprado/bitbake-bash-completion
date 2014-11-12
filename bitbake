@@ -9,7 +9,7 @@
 _bitbake()
 {
     local cur prev opts_short opts_long tasks bbdir bbfile recipes
-    local bblayers_conf bblayers_md5 bblayers_bbpath
+    local ui bblayers_conf bblayers_md5 bblayers_bbpath
 
     COMPREPLY=()
 
@@ -38,6 +38,8 @@ _bitbake()
            configure_ptest_base diffconfig install_ptest_base \
            menuconfig patch"
 
+    ui="knotty hob depexp"
+
     if [[ "$prev" == "=" ]]; then
         prev="${COMP_WORDS[COMP_CWORD - 2]}"
     elif [[ "$cur" == "=" ]]; then
@@ -46,8 +48,13 @@ _bitbake()
 
     case "$prev" in
        
-        "-c"|"--cmd")
+        "-c"|"--cmd"|"-C"|"--clear-stamp")
             COMPREPLY=( $(compgen -W "${tasks}" -- ${cur}) )
+            return 0
+        ;;
+        
+        "-u"|"--ui")
+            COMPREPLY=( $(compgen -W "${ui}" -- ${cur}) )
             return 0
         ;;
 
