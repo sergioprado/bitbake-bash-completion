@@ -9,7 +9,7 @@
 _bitbake()
 {
     local cur prev opts_short opts_long tasks bbdir bbfile recipes
-    local ui bblayers_conf bblayers_md5 bblayers_bbpath
+    local ui bblayers_conf bblayers_md5 bblayers_bbfile bblayers_recipes
 
     COMPREPLY=()
 
@@ -79,30 +79,40 @@ _bitbake()
 
     bblayers_conf="conf/bblayers.conf"
     bblayers_md5=".bblayers.conf.md5"
-    bblayers_bbpath=".bblayers.bbpath"
+    bblayers_bbfile=".bblayers.bbfile"
+    bblayers_recipes=".bblayers.recipes"
+
+    _parse_recipes () {
+	echo `bitbake -e | grep "^BBFILES=" | cut -d "=" -f 2 | sed -e 's/"//g'` > $bblayers_bbfile
+	 for bbfile_entry in `cat $bblayers_bbfile`; do
+	     if [ "${bbfile_entry%.bbappend}" = "${bbfile_entry}" ]; then
+		 echo $bbfile_entry
+	     fi
+	 done | while read recipe_path; do
+	     recipe="${recipe_path##*/}"
+	     recipe="${recipe%%_*.bb}"
+	     recipe="${recipe%%.bb}"
+	     if [ "$recipe" != "*" ]; then
+		 echo $recipe
+	     fi
+	 done > $bblayers_recipes
+    }
 
     if [ ! -e $bblayers_conf ]; then
         return 0;
     fi
 
-    md5sum --quiet --status -c $bblayers_md5 2>/dev/null
-    if [ $? != 0 -o ! -e $bblayers_bbpath ]; then
-         printf "\nReading BBPATH..."
-         md5sum $bblayers_conf > $bblayers_md5
-         echo `bitbake -e | grep "^BBPATH=" | cut -d "=" -f 2 | sed -e 's/^"//'  -e 's/"$//'` > $bblayers_bbpath
-         echo "done! Press TAB to continue..."
+    if [ "$prev" = "bitbake" -a "$cur" = "" ]; then
+	_parse_recipes
     fi
 
-    for bbdir in `cat $bblayers_bbpath | sed s/:/\ /g`; do
-        for bbfile in `echo $bbdir/*/*/${cur}*.bb`; do
-            if [ -e $bbfile ]; then
-                bbfile=`basename $bbfile`
-                bbfile=${bbfile%%_*.bb}
-                bbfile=${bbfile%%.bb}
-                recipes="$recipes $bbfile"
-            fi
-        done
-    done
+    md5sum --quiet --status -c $bblayers_md5 2>/dev/null
+    if [ $? != 0 -o ! -e $bblayers_recipes ]; then
+         md5sum $bblayers_conf > $bblayers_md5
+	 _parse_recipes
+    fi
+
+    recipes=`cat $bblayers_recipes`
 
     COMPREPLY=( $(compgen -W "${recipes}" -- ${cur}) )
     return 0
